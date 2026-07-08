@@ -1,1 +1,94 @@
-# Robot-Sliders
+#include <Servo.h>
+
+Servo leftServo;
+Servo rightServo;
+
+// Servo Pins
+const int LEFT_SERVO = 13;
+const int RIGHT_SERVO = 12;
+
+// Sliders
+const int LEFT_SLIDER = A0;
+const int RIGHT_SLIDER = A1;
+
+// Ultrasonic
+const int TRIG = A2;
+const int ECHO = A3;
+
+// Walking Variables
+bool step = false;
+unsigned long previousMillis = 0;
+const int stepTime = 300; // Walking speed (ms)
+
+void setup() {
+  Serial.begin(9600);
+
+  leftServo.attach(LEFT_SERVO);
+  rightServo.attach(RIGHT_SERVO);
+
+  pinMode(TRIG, OUTPUT);
+  pinMode(ECHO, INPUT);
+
+  // Start Position
+  leftServo.write(0);
+  rightServo.write(180);
+  delay(1000);
+}
+
+int getDistance() {
+  digitalWrite(TRIG, LOW);
+  delayMicroseconds(2);
+
+  digitalWrite(TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG, LOW);
+
+  long duration = pulseIn(ECHO, HIGH, 30000);
+
+  if (duration == 0) return 999;
+
+  return duration * 0.034 / 2;
+}
+
+void loop() {
+
+  int baseValue = analogRead(LEFT_SLIDER);
+  int walkValue = analogRead(RIGHT_SLIDER);
+
+  // Base Position (Left Slider)
+  int base = map(baseValue, 0, 1023, 30, 150);
+
+  int distance = getDistance();
+
+  Serial.print("Distance: ");
+  Serial.println(distance);
+
+  // Walking only if Right Slider is forward
+  if (walkValue > 600 && distance > 20) {
+
+    if (millis() - previousMillis >= stepTime) {
+
+      previousMillis = millis();
+
+      if (step) {
+        leftServo.write(base - 30);
+        rightServo.write(180 - (base + 30));
+      }
+      else {
+        leftServo.write(base + 30);
+        rightServo.write(180 - (base - 30));
+      }
+
+      step = !step;
+    }
+
+  }
+  else {
+
+    // Stop Walking
+    leftServo.write(base);
+    rightServo.write(180 - base);
+
+  }
+
+}
